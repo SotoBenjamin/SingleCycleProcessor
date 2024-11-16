@@ -13,7 +13,8 @@ module datapath (
 	Instr,
 	ALUResult,
 	WriteData,
-	ReadData
+	ReadData,
+	RegaSrc
 );
 	input wire clk;
 	input wire reset;
@@ -21,9 +22,10 @@ module datapath (
 	input wire RegWrite;
 	input wire [1:0] ImmSrc;
 	input wire ALUSrc;
-	input wire [1:0] ALUControl;
+	input wire [2:0] ALUControl;
 	input wire MemtoReg;
 	input wire PCSrc;
+	input wire RegaSrc; 
 	output wire [3:0] ALUFlags;
 	output wire [31:0] PC;
 	input wire [31:0] Instr;
@@ -38,8 +40,12 @@ module datapath (
 	wire [31:0] SrcB;
 	wire [31:0] Result;
 	wire [31:0] WD;
+	wire [31:0] ALR;
 	wire [3:0] RA1;
 	wire [3:0] RA2;
+	wire [31:0] SrcC;
+	wire [31:0] AR;
+	wire [31:0] Src;
 	mux2 #(32) pcmux(
 		.d0(PCPlus4),
 		.d1(Result),
@@ -68,6 +74,7 @@ module datapath (
 		.s(RegSrc[0]),
 		.y(RA1)
 	);
+
 	mux2 #(4) ra2mux(
 		.d0(Instr[3:0]),
 		.d1(Instr[15:12]),
@@ -81,17 +88,20 @@ module datapath (
 		.we3(RegWrite),
 		.ra1(RA1),
 		.ra2(RA2),
+		.ra4(Instr[11:8]),
 		.wa3(Instr[15:12]),
 		.wd3(Result),
 		.r15(PCPlus8),
 		.rd1(SrcA),
-		.rd2(WD)
+		.rd2(WD),
+		.rd4(SrcC)
 	);
 
 	shift sh(
 	    .ShiftD(Instr[11:5]),
 		.WD(WD),
-		.WriteData(WriteData)
+		.WriteData(WriteData),
+		.en(RegaSrc)
 	);
 
 
@@ -101,22 +111,40 @@ module datapath (
 		.s(MemtoReg),
 		.y(Result)
 	);
+
+
 	extend ext(
 		.Instr(Instr[23:0]),
 		.ImmSrc(ImmSrc),
 		.ExtImm(ExtImm)
 	);
+
 	mux2 #(32) srcbmux(
 		.d0(WriteData),
 		.d1(ExtImm),
 		.s(ALUSrc),
 		.y(SrcB)
 	);
+
 	alu alu(
 		SrcA,
 		SrcB,
 		ALUControl,
-		ALUResult,
+		AR,
 		ALUFlags
 	);
+	mux2 #(32) srcmux(
+		.d0(32'b0),
+		.d1(SrcC),
+		.s(RegaSrc),
+		.y(Src)
+	);
+	
+	adder #(32) add1(
+		.a(AR),
+		.b(Src),
+		.y(ALUResult)
+	);
+
+
 endmodule

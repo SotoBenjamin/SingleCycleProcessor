@@ -6,7 +6,7 @@ rm -f simulation.out simulation.vcd
 # Compilar todos los módulos con iverilog
 iverilog -o simulation.out \
   top.v \
-  testbench.v \
+  testbench2.v \
   arm.v \
   controller.v \
   datapath.v \
